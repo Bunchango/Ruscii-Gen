@@ -119,7 +119,7 @@ impl Converter {
 
         // Downscaling and grayscale the image for preprocessing
         // Maybe let user choose resize algorithm
-        let resized_img = ori_img.resize(new_w, new_h, FilterType::CatmullRom);
+        let resized_img = ori_img.resize_exact(new_w, new_h, FilterType::CatmullRom);
         let mut gs_resized_img = resized_img.to_luma8();
 
         // Apply preprocessors before quantization
