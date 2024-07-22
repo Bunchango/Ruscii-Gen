@@ -5,7 +5,7 @@ mod image_manip;
 
 fn main() {
     let converter: Converter = ascii::converter::Converter::default();
-    let path = "3.png";
+    let path = "7.png";
     let _ = converter
         .convert_img(
             &format!("test/{}", path),
