@@ -9,7 +9,7 @@ use crate::image_manip::processing::{
 use crate::image_manip::util::bufr_to_arr;
 use image::imageops::FilterType;
 use image::io::Reader as ImageReader;
-use image::{DynamicImage, GenericImageView, ImageBuffer, Rgba};
+use image::{DynamicImage, GenericImageView, ImageBuffer, Pixel, Rgb};
 use imageproc::drawing::draw_text_mut;
 use ndarray::{ArrayView2, Zip};
 
@@ -19,11 +19,11 @@ pub struct Converter {
     tile_preprocessors: Vec<Box<dyn Processor<u8, u8>>>,
     edge_preprocessors: Vec<Box<dyn Processor<u8, u8>>>,
     edge_detector: Box<dyn EdgeDetect<u8, u8>>,
-    bg_color: Rgba<u8>,
+    bg_color: Rgb<u8>,
     // If use_image_color is true, then when drawing image, the drawer will use the color of the
     // pixel in the original image instead
     use_image_color: bool,
-    color: Rgba<u8>,
+    color: Rgb<u8>,
 }
 
 impl Converter {
@@ -40,9 +40,9 @@ impl Converter {
                 Box::new(Threshold::default()),
             ],
             edge_detector: Box::new(Sobel::new()),
-            bg_color: Rgba([117, 33, 141, 255]),
+            bg_color: Rgb([117, 33, 141]),
             use_image_color: true,
-            color: Rgba([255, 255, 255, 255]),
+            color: Rgb([255, 255, 255]),
         }
     }
 
@@ -52,9 +52,9 @@ impl Converter {
         tile_preprocessors: Vec<Box<dyn Processor<u8, u8>>>,
         edge_preprocessors: Vec<Box<dyn Processor<u8, u8>>>,
         edge_detector: Box<dyn EdgeDetect<u8, u8>>,
-        bg_color: Rgba<u8>,
+        bg_color: Rgb<u8>,
         use_image_color: bool,
-        color: Rgba<u8>,
+        color: Rgb<u8>,
     ) -> Self {
         Converter {
             font_settings,
@@ -72,14 +72,14 @@ impl Converter {
         &self,
         arr: &ArrayView2<char>,
         arr_img: DynamicImage, // arr_img must be the same size as arr
-    ) -> Result<ImageBuffer<Rgba<u8>, Vec<u8>>, ConvertError> {
+    ) -> Result<ImageBuffer<Rgb<u8>, Vec<u8>>, ConvertError> {
         let (h, w): (u32, u32) = (
             arr.shape()[0] as u32 * self.font_settings.font_size,
             arr.shape()[1] as u32 * self.font_settings.font_size,
         );
 
         let mut ascii_bufr =
-            ImageBuffer::<Rgba<u8>, Vec<u8>>::from_fn(w, h, |_, _| self.bg_color.clone());
+            ImageBuffer::<Rgb<u8>, Vec<u8>>::from_fn(w, h, |_, _| self.bg_color.clone());
 
         // Load font
         let (font, scale) = FontLoader::load_font_from_settings(&self.font_settings)?;
@@ -92,7 +92,7 @@ impl Converter {
                 let y_as_u32 = y as u32;
 
                 if self.use_image_color {
-                    color = arr_img.get_pixel(x_as_u32, y_as_u32);
+                    color = arr_img.get_pixel(x_as_u32, y_as_u32).to_rgb();
                 }
 
                 draw_text_mut(
@@ -135,7 +135,7 @@ impl Converter {
 
         // Downscaling and grayscale the image for preprocessing
         // Maybe let user choose resize algorithm
-        let resized_img = ori_img.resize_exact(new_w, new_h, FilterType::CatmullRom);
+        let resized_img = ori_img.resize_exact(new_w, new_h, FilterType::Triangle);
         let mut gs_resized_img = resized_img.to_luma8();
 
         // Apply preprocessors before quantization
