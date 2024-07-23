@@ -132,7 +132,6 @@ version = "0.1.0"
 dependencies = [
  "ab_glyph",
  "clap",
- "crossterm",
  "image 0.25.1",
  "imageproc",
  "ndarray",

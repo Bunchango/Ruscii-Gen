@@ -88,15 +88,18 @@ impl Converter {
 
         for (y, row) in arr.outer_iter().enumerate() {
             for (x, &ch) in row.iter().enumerate() {
+                let x_as_u32 = x as u32;
+                let y_as_u32 = y as u32;
+
                 if self.use_image_color {
-                    color = arr_img.get_pixel(x as u32, y as u32);
+                    color = arr_img.get_pixel(x_as_u32, y_as_u32);
                 }
 
                 draw_text_mut(
                     &mut ascii_bufr,
                     color,
-                    (x as u32 * self.font_settings.font_size) as i32,
-                    (y as u32 * self.font_settings.font_size) as i32,
+                    (x_as_u32 * self.font_settings.font_size) as i32,
+                    (y_as_u32 * self.font_settings.font_size) as i32,
                     scale,
                     &font,
                     &ch.to_string(),
