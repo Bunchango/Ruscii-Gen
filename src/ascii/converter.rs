@@ -3,9 +3,7 @@ use super::error::ConvertError;
 use super::font_loader::{FontLoader, FontSettings};
 use crate::image_manip::edge_detect::{EdgeDetect, Sobel};
 use crate::image_manip::edge_processor::EdgeDownscaler;
-use crate::image_manip::processing::{
-    BilateralFilter, DoG, MedianBlur, Processor, SharpenGaussian, Threshold,
-};
+use crate::image_manip::processing::{DoG, MedianBlur, Processor, SharpenGaussian, Threshold};
 use crate::image_manip::util::bufr_to_arr;
 use image::imageops::FilterType;
 use image::io::Reader as ImageReader;
@@ -26,6 +24,8 @@ pub struct Converter {
     color: Rgb<u8>,
 }
 
+// TODO: Remove color banding
+
 impl Converter {
     pub fn default() -> Self {
         Converter {
@@ -35,7 +35,8 @@ impl Converter {
             edge_preprocessors: vec![
                 Box::new(SharpenGaussian::default()),
                 Box::new(DoG::default()),
-                Box::new(BilateralFilter::default()),
+                // No need for Bilateral as the threshold is doing most of the work
+                // Box::new(BilateralFilter::default()),
                 Box::new(MedianBlur::default()),
                 Box::new(Threshold::default()),
             ],
