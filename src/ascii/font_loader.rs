@@ -18,9 +18,9 @@ impl FontSettings {
 
     pub fn default() -> Self {
         FontSettings {
-            // 4 is the optimal and smallest font size for displaying the characters correctly
+            // 6 is the optimal and smallest font size for displaying the characters correctly
             // with the default settings
-            font_size: 4,
+            font_size: 6,
             font_path: "font.ttf".to_string(),
         }
     }

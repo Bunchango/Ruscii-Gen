@@ -10,6 +10,8 @@ use image::io::Reader as ImageReader;
 use image::{DynamicImage, GenericImageView, ImageBuffer, Pixel, Rgb};
 use imageproc::drawing::draw_text_mut;
 use ndarray::{ArrayView2, Zip};
+use rayon::prelude::*;
+use std::sync::{Arc, Mutex};
 
 pub struct Converter {
     font_settings: FontSettings,
@@ -72,43 +74,68 @@ impl Converter {
     fn arr_to_img(
         &self,
         arr: &ArrayView2<char>,
-        arr_img: DynamicImage, // arr_img must be the same size as arr
+        arr_img: &DynamicImage,
     ) -> Result<ImageBuffer<Rgb<u8>, Vec<u8>>, ConvertError> {
-        let (h, w): (u32, u32) = (
+        let (h, w) = (
             arr.shape()[0] as u32 * self.font_settings.font_size,
             arr.shape()[1] as u32 * self.font_settings.font_size,
         );
 
-        let mut ascii_bufr =
-            ImageBuffer::<Rgb<u8>, Vec<u8>>::from_fn(w, h, |_, _| self.bg_color.clone());
+        let ascii_bufr = Arc::new(Mutex::new(ImageBuffer::<Rgb<u8>, Vec<u8>>::from_pixel(
+            w,
+            h,
+            self.bg_color.clone(),
+        )));
 
-        // Load font
         let (font, scale) = FontLoader::load_font_from_settings(&self.font_settings)?;
 
-        let mut color = self.color;
+        let font_size = self.font_settings.font_size;
+        let use_image_color = self.use_image_color;
+        let bg_color = self.bg_color;
+        let color = self.color;
 
-        for (y, row) in arr.outer_iter().enumerate() {
-            for (x, &ch) in row.iter().enumerate() {
-                let x_as_u32 = x as u32;
-                let y_as_u32 = y as u32;
+        arr.outer_iter()
+            .enumerate()
+            .collect::<Vec<_>>() // Collect rows to maintain order since par_iter might not preserve order
+            .par_iter() // Process rows in parallel
+            .for_each(|(y, row)| {
+                let mut local_bufr = ImageBuffer::from_pixel(w, font_size, bg_color.clone());
+                for (x, &ch) in row.iter().enumerate() {
+                    let x_pos = (x as u32 * font_size) as i32;
+                    let y_pos = 0; // local y position in the row buffer
 
-                if self.use_image_color {
-                    color = arr_img.get_pixel(x_as_u32, y_as_u32).to_rgb();
+                    let mut local_color = color.clone();
+                    if use_image_color {
+                        local_color = arr_img.get_pixel(x as u32, *y as u32).to_rgb();
+                    }
+                    draw_text_mut(
+                        &mut local_bufr,
+                        local_color,
+                        x_pos,
+                        y_pos,
+                        scale,
+                        &font,
+                        &ch.to_string(),
+                    );
                 }
 
-                draw_text_mut(
-                    &mut ascii_bufr,
-                    color,
-                    (x_as_u32 * self.font_settings.font_size) as i32,
-                    (y_as_u32 * self.font_settings.font_size) as i32,
-                    scale,
-                    &font,
-                    &ch.to_string(),
-                );
-            }
-        }
+                let mut ascii_bufr_lock = ascii_bufr.lock().unwrap();
 
-        Ok(ascii_bufr)
+                // Calculate the starting Y position for this row in the final image buffer
+                let start_y = *y as u32 * font_size;
+
+                // Merge the processed row into the final image buffer at the correct position
+                for (x, y, pixel) in local_bufr.enumerate_pixels() {
+                    ascii_bufr_lock.put_pixel(x, y + start_y, *pixel);
+                }
+            });
+
+        let final_bufr = Arc::try_unwrap(ascii_bufr)
+            .expect("Arc unwrap failed")
+            .into_inner()
+            .unwrap();
+
+        Ok(final_bufr)
     }
 
     pub fn convert_img(
@@ -182,7 +209,7 @@ impl Converter {
                 }
             });
 
-        let ascii_img = self.arr_to_img(&ds_edge_arr.view(), resized_img)?;
+        let ascii_img = self.arr_to_img(&ds_edge_arr.view(), &resized_img)?;
 
         // Save image
         ascii_img.save(out)?;

@@ -55,45 +55,23 @@ impl EdgeDetect<u8, u8> for Sobel {
                 *theta_norm = (theta / PI) * 0.5 + 0.5;
             });
 
-        let space_mask = theta_arr_norm.mapv(|x| x == 0.5);
-        let vert_mask = theta_arr_norm.mapv(|x| 0.95 <= x && x <= 1.0);
-        let hori_mask =
-            theta_arr_norm.mapv(|x| ((x >= 0.25) && (x < 0.27)) || ((x >= 0.75) && (x < 0.77)));
-
-        // Mask for diagonal lines from left to right
-        let diag_mask_1 = theta_arr_norm.mapv(|x| {
-            (((x >= 0.0) && (x < 0.28)) || ((x >= 0.55) && (x < 0.78)))
-                && !((x >= 0.75) && (x < 0.77))
-                && !(x == 0.5)
-                && !((x >= 0.25) && (x < 0.27))
-        });
-        let diag_mask_2 = theta_arr_norm.mapv(|x| {
-            (((x >= 0.28) && (x < 0.55)) || ((x >= 0.78) && (x < 1.0)))
-                && !((x >= 0.75) && (x < 0.77))
-                && !(x == 0.5)
-                && !((x >= 0.25) && (x < 0.27))
+        let edges = theta_arr_norm.mapv(|x: f32| -> u8 {
+            // Default as 0 representing space character
+            let mut res = 0;
+            if x == 0.5 {
+                res = 0;
+            } else if x >= 0.95 && x <= 1.0 {
+                res = 2;
+            } else if ((x >= 0.25) && (x < 0.27)) || ((x >= 0.75) && (x < 0.77)) {
+                res = 1;
+            } else if ((x >= 0.28) && (x < 0.55)) || ((x >= 0.78) && (x < 1.0)) {
+                res = 3;
+            } else if ((x >= 0.28) && (x < 0.55)) || ((x >= 0.78) && (x < 1.0)) {
+                res = 4;
+            }
+            res
         });
 
-        let masks = vec![
-            (space_mask, 0),
-            (vert_mask, 2),
-            (hori_mask, 1),
-            (diag_mask_1, 3),
-            (diag_mask_2, 4),
-        ];
-
-        let mut edge_mapping = Array2::zeros((h as usize, w as usize));
-        // Apply the masks
-        for (mask, value) in masks {
-            Zip::from(&mask)
-                .and(&mut edge_mapping)
-                .for_each(|&mask_val, edge| {
-                    if mask_val {
-                        *edge = value;
-                    }
-                });
-        }
-
-        Ok(arr_to_bufr(&edge_mapping))
+        Ok(arr_to_bufr(&edges))
     }
 }
