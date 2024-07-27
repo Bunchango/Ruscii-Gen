@@ -216,11 +216,4 @@ impl Converter {
 
         Ok(())
     }
-
-    pub fn convert_vid(&self, path: &str) {
-        /*
-         * Read a video given file path and convert each frame of video into ascii image. Then combine
-         * every frame to form a complete video
-         */
-    }
 }

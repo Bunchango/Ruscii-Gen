@@ -7,7 +7,7 @@ use std::time::Instant;
 fn main() {
     let start = Instant::now();
     let converter: Converter = ascii::converter::Converter::default();
-    let path = "5.png";
+    let path = "2.png";
     let _ = converter
         .convert_img(
             &format!("test/{}", path),
