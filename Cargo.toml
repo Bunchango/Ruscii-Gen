@@ -7,10 +7,8 @@ edition = "2021"
 
 [dependencies]
 ab_glyph = "0.2.28"
-clap = "4.5.9"
 image = {version = "0.25.1", features = ["rayon"]}
 imageproc = {version = "0.25.0", features = ["rayon"]}
 ndarray = {version = "0.15.6", features = ["rayon"]}
 num-traits = "0.2.19"
 rayon = "1.10.0"
-viuer = "0.7.1"
